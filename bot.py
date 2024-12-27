@@ -39,11 +39,34 @@ def get_user_info(telegram_id):
     conn.close()
 
     if user:
-        return f"Пользователь: *{user[2]} (@{user[1]})*\nЧисло очков: *{user[3]}*\nСыграно игр: *{user[4]}*\nВыиграно игр: *{user[5]}*"
+        if user[1] != "":
+            return f"Пользователь: *{user[2]} (@{user[1]})*\nЧисло очков: *{user[3]}*\nСыграно игр: *{user[4]}*\nВыиграно игр: *{user[5]}*"
+        else: return f"Пользователь: [{user[2]}](tg://user?id={telegram_id})\nЧисло очков: *{user[3]}*\nСыграно игр: *{user[4]}*\nВыиграно игр: *{user[5]}*"
     else:
         print(f"Пользователь с ID {telegram_id} не найден.")
         return None
 
+# Функция для добавления игроков в таблицу
+def add_pdb(message):
+    conn = connect_db()
+    cursor = conn.cursor()
+    # Если username отсутствует, заменить на уникальный идентификатор
+    username = message.from_user.username or ""
+    cursor.execute("SELECT * FROM leaderboard WHERE telegram_id = ?", (message.from_user.id,))
+    user = cursor.fetchone()
+
+    if not user:
+        # Если пользователя нет в базе, добавляем его
+        cursor.execute('''
+                    INSERT INTO leaderboard (telegram_id, username, full_name)
+                    VALUES (?, ?, ?)
+                ''', (message.from_user.id, username, message.from_user.full_name))
+        print(f"Пользователь {message.from_user.full_name} добавлен в базу.")
+    else:
+        print(f"Пользователь {message.from_user.full_name} уже существует в базе.")
+
+    conn.commit()
+    conn.close()
 
 # Функция для вывода топ-15 лидеров
 def get_top_leaders():
@@ -62,58 +85,21 @@ def get_top_leaders():
     leaderboard_text += "`-------------------------`\n"
 
     for idx, (username, full_name, points) in enumerate(leaders, start=1):
-        leaderboard_text += f"`{idx:2} | @{username[:10]:<10} | {points:6}`\n"
+        if username != "":
+            leaderboard_text += f"`{idx:2} | @{username[:10]:<10} | {points:6}`\n"
+        else:
+            leaderboard_text += f"`{idx:2} | {full_name[:10]:<10} | {points:6}`\n"
 
     return leaderboard_text
 
-
-# Функция для изменения счёта и статистики пользователя
-def update_user_stats(telegram_id, points_to_add=0, game_played=False, game_won=False):
-    conn = connect_db()
-    cursor = conn.cursor()
-
-    # Обновление данных пользователя
-    cursor.execute('''
-        UPDATE leaderboard
-        SET points = points + ?,
-            games_played = games_played + ?,
-            games_won = games_won + ?,
-            last_updated = ?
-        WHERE telegram_id = ?
-    ''', (
-        points_to_add,  # Добавляемые очки
-        1 if game_played else 0,  # Увеличение количества игр, если игра сыграна
-        1 if game_won else 0,  # Увеличение побед, если игра выиграна
-        datetime.now(),  # Текущее время для last_updated
-        telegram_id
-    ))
-    conn.commit()
-    conn.close()
-
 # Команда start
 @router.message(Command(commands=['start']))
-async def create_game(message: Message):
-    conn = connect_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM leaderboard WHERE telegram_id = ?", (message.from_user.id,))
-    user = cursor.fetchone()
-
-    if not user:
-        # Если пользователя нет в базе, добавляем его
-        cursor.execute('''
-                INSERT INTO leaderboard (telegram_id, username, full_name)
-                VALUES (?, ?, ?)
-            ''', (message.from_user.id, message.from_user.username, message.from_user.full_name))
-        print(f"Пользователь {message.from_user.username} добавлен в базу.")
-    else:
-        print(f"Пользователь {message.from_user.username} уже существует в базе.")
-
-    conn.commit()
-    conn.close()
+async def start_f(message: Message):
+    add_pdb(message)
 
 # Команда help
 @router.message(Command(commands=['help']))
-async def create_game(message: Message):
+async def help_f(message: Message):
     chat_id = message.chat.id
     txt = ("📖 Правила игры и команды бота\n\n"+
     "🔹 Как начать игру?\n"+
@@ -162,7 +148,7 @@ async def create_game(message: Message):
 
 # Функция для проверки информации о пользователе
 @router.message(Command(commands=['mystats']))
-async def create_game(message: Message):
+async def stats_f(message: Message):
     chat_id = message.chat.id
     if message.chat.is_forum:
         await bot.send_message(chat_id=chat_id, message_thread_id=message.message_thread_id,
@@ -176,7 +162,7 @@ async def create_game(message: Message):
 
 # Функция для вывода топ-15 лидеров
 @router.message(Command(commands=['leaderboard']))
-async def create_game(message: Message):
+async def board_f(message: Message):
     chat_id = message.chat.id
     if message.chat.is_forum:
         await bot.send_message(chat_id=chat_id, message_thread_id=message.message_thread_id,
@@ -217,7 +203,7 @@ async def create_game(message: Message):
 
 # Команда для удаления игры
 @router.message(Command(commands=['endgame']))
-async def create_game(message: Message):
+async def end_game(message: Message):
     chat_id = message.chat.id
     if chat_id == message.from_user.id:
         return
@@ -236,7 +222,7 @@ async def create_game(message: Message):
 @router.message(Command(commands=['join']))
 async def join_game(message: Message):
     chat_id = message.chat.id
-
+    add_pdb(message)
     if message.from_user.id  in user_data:
         del user_data[message.from_user.id]
 
