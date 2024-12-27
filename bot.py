@@ -355,7 +355,7 @@ async def restrict_non_players(message: Message):
                     if not message.chat.is_forum:
                         await message.delete()  # Удаляем сообщение
                         return
-        else:
+        elif active_games[chat_id].state !=  "waiting":
             game = next((g for g in active_games.values() if user_id in [p['player_id'] for p in g.players]), None)
             if user_id == game.lblock_player or user_id not in [p["player_id"] for p in game.players]:
                 await message.delete()  # Удаляем сообщение
