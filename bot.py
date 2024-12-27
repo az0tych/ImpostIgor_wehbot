@@ -88,7 +88,7 @@ def get_top_leaders():
         if username != "":
             leaderboard_text += f"`{idx:2} | @{username[:10]:<10} | {points:6}`\n"
         else:
-            leaderboard_text += f"`{idx:2} | {full_name[:10]:<10} | {points:6}`\n"
+            leaderboard_text += f"`{idx:2} | {full_name[:11]:<11} | {points:6}`\n"
 
     return leaderboard_text
 
