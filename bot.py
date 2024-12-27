@@ -327,7 +327,7 @@ async def start_game(message: Message):
                 mtxt = "Ваши напарники:\n"
                 for p in game.players:
                     if isinstance(p["role"], (Mafia, DonMafia)) and p["player_id"] != player_id:
-                        mtxt += f"{p["player_name"]} {p["role"].role_name}\n"
+                        mtxt += f"{p['player_name']} {p['role'].role_name}\n"
                 await bot.send_message(player_id, mtxt)
 
         await message.answer("Роли распределены, игра начинается! Ночная фаза началась.")
