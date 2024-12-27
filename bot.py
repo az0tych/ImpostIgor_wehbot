@@ -24,6 +24,7 @@ API_TOKEN = os.getenv("TELEGRAM_TOKEN")
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 router = Router()
+port = os.getenv('PORT', 10000)
 
 # Хранилище активных игр
 active_games = {}
